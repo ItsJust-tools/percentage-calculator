@@ -9,9 +9,6 @@ export {
   roundTrips,
   numberOrNull,
 } from './tool-definition';
-export { ToolCanvas } from './components/tool-canvas';
-export { ToolToolbar } from './components/tool-toolbar';
-export { ToolSidebar } from './components/tool-sidebar';
 export { Canvas } from './components/Canvas';
 export { Sidebar } from './components/Sidebar';
 export { Toolbar } from './components/Toolbar';

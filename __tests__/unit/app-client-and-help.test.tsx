@@ -75,11 +75,11 @@ vi.mock('@/tool', () => ({
     theme: { brand: 'Percentage Calculator' },
   },
   templateBaseVersion: '1.1.0',
-  ToolCanvas: ({ state }: { state: Record<string, unknown> }) => (
+  Canvas: ({ state }: { state: Record<string, unknown> }) => (
     <div>canvas:{String(state.mode)}</div>
   ),
-  ToolToolbar: () => <div>toolbar</div>,
-  ToolSidebar: () => <div>sidebar</div>,
+  Toolbar: () => <div>toolbar</div>,
+  Sidebar: () => <div>sidebar</div>,
   summaryText: () => 'summary',
 }));
 

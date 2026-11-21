@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { ToolShell, useTool, ImportExport } from '@itsjust/core';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
-import { toolConfig, templateBaseVersion, ToolCanvas, ToolToolbar, ToolSidebar, summaryText } from '@/tool';
+import { toolConfig, templateBaseVersion, Canvas, Toolbar, Sidebar, summaryText } from '@/tool';
 import { percentageCalculatorTool } from '@/tool/tool-definition';
 import type { ToolState } from '@/tool/types';
 
@@ -105,7 +105,7 @@ export default function ToolClient() {
 
   const toolbarContent = (
     <>
-      <ToolToolbar />
+      <Toolbar state={state} onChange={(next) => setToolData(() => next)} onClear={() => setToolData((prev) => ({ ...prev, history: [] }))} onCopy={() => void handleCopyResult()} />
       <ImportExport
         formats={tool.supportedFormats}
         onExport={tool.handleExport}
@@ -117,16 +117,16 @@ export default function ToolClient() {
     </>
   );
 
-  const sidebarContent = <ToolSidebar state={state} onStateChange={handleStateChange} />;
+  const sidebarContent = <Sidebar state={state} onChange={(next) => setToolData(() => next)} />;
 
   const canvasContent = (
-    <ToolCanvas
-      state={state}
-      canvasRef={canvasRef}
-      onStateChange={handleStateChange}
-      onClear={() => setToolData((prev) => ({ ...prev, history: [] }))}
-      onCopyResult={() => void handleCopyResult()}
-    />
+    <div ref={canvasRef}>
+      <Canvas
+        state={state}
+        onChange={(next) => setToolData(() => next)}
+        onSaveHistory={(text) => setToolData((prev) => ({ ...prev, history: [{ text, createdAt: new Date().toISOString() }, ...prev.history].slice(0, 20) }))}
+      />
+    </div>
   );
 
   const statusBarContent = (

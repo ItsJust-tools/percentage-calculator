@@ -13,9 +13,9 @@ import { generateJsonLd, generateToolMetadata } from '@/lib/seo';
 import toolConfig from '@/tool/tool.config';
 import { getPublicSiteUrl, templateMetadata } from '@/tool/template-metadata';
 import { percentageCalculatorTool } from '@/tool/tool-definition';
-import { ToolCanvas } from '@/tool/components/tool-canvas';
-import { ToolSidebar } from '@/tool/components/tool-sidebar';
-import { ToolToolbar } from '@/tool/components/tool-toolbar';
+import { Canvas } from '@/tool/components/Canvas';
+import { Sidebar } from '@/tool/components/Sidebar';
+import { Toolbar } from '@/tool/components/Toolbar';
 import { DEFAULT_STATE as BASE_DEFAULT_STATE } from '@/tool/types';
 import type { ExporterLoader } from '@itsjust/core';
 
@@ -143,19 +143,15 @@ describe('app and seo', () => {
   it('renders tool components', () => {
     render(
       <>
-        <ToolToolbar />
-        <ToolSidebar state={{ ...BASE_DEFAULT_STATE }} onStateChange={() => {}} />
-        <ToolCanvas
+        <Toolbar state={{ ...BASE_DEFAULT_STATE }} onChange={() => {}} onClear={() => {}} onCopy={() => {}} />
+        <Sidebar state={{ ...BASE_DEFAULT_STATE }} onChange={() => {}} />
+        <Canvas
           state={{ ...BASE_DEFAULT_STATE, mode: 'of', percentageOf: '20', ofBase: '150' }}
-          fontSize={16}
+          onChange={() => {}}
         />
       </>
     );
 
-    expect(screen.getByRole('link', { name: 'Open help page' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('application', { name: 'Percentage calculator canvas' })
-    ).toBeInTheDocument();
     expect(screen.getByTestId('mode-tab-of')).toBeInTheDocument();
     expect(screen.getByTestId('result-card')).toBeInTheDocument();
     expect(screen.getByTestId('result-main')).toHaveTextContent('30');
