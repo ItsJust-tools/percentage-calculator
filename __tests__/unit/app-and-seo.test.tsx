@@ -12,12 +12,11 @@ import { cn } from '@/lib/utils';
 import { generateJsonLd, generateToolMetadata } from '@/lib/seo';
 import toolConfig from '@/tool/tool.config';
 import { getPublicSiteUrl, templateMetadata } from '@/tool/template-metadata';
-import { bpmTapTempoTool } from '@/tool/tool-definition';
-import {
-  DEFAULT_STATE,
-  IDLE_TIMEOUT_MS,
-  type ToolState,
-} from '@/tool/types';
+import { romanNumeralTool } from '@/tool/tool-definition';
+import { ToolCanvas } from '@/tool/components/tool-canvas';
+import { ToolSidebar } from '@/tool/components/tool-sidebar';
+import { ToolToolbar } from '@/tool/components/tool-toolbar';
+import { DEFAULT_STATE } from '@/tool/types';
 import type { ExporterLoader } from '@itsjust/core';
 
 vi.mock('next/link', () => ({
@@ -94,20 +93,16 @@ describe('app and seo', () => {
   it('covers tool definition and helper exports', async () => {
     expect(cn('a', undefined, 'b', false, null, 'c')).toBe('a b c');
     expect(getPublicSiteUrl()).toBe('http://localhost:3000');
-    expect(bpmTapTempoTool.id).toBe(toolConfig.id);
-    expect(bpmTapTempoTool.name).toBe(toolConfig.name);
-    const idleState: ToolState = { taps: [1, 2], clickEnabled: true, windowMs: DEFAULT_STATE.windowMs };
-    const serialized = JSON.parse(bpmTapTempoTool.serialize(idleState));
-    expect(serialized.taps).toEqual([1, 2]);
-    const bad = bpmTapTempoTool.deserialize({ nope: true });
-    expect(bad.success).toBe(false);
-    if (!bad.success) {
-      expect(bad.error).toContain('Invalid data format');
-    }
-    const round = bpmTapTempoTool.deserialize({ taps: [10, 610], clickEnabled: false, windowMs: 8_000 });
-    expect(round.success).toBe(true);
-    expect(round.success && round.data.windowMs).toBe(8_000);
-    const exporters = (bpmTapTempoTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ?? [];
+    expect(romanNumeralTool.deserialize({ direction: 'number', numberInput: '1987', romanInput: '' })).toEqual({
+      success: true,
+      data: { direction: 'number', numberInput: '1987', romanInput: '' },
+    });
+    expect(romanNumeralTool.deserialize({ nope: true })).toEqual({
+      success: false,
+      error: 'Invalid data format: expected { direction: "number"|"roman", numberInput: string, romanInput: string }',
+    });
+    expect(romanNumeralTool.serialize({ ...DEFAULT_STATE, numberInput: '42' })).toContain('"numberInput":"42"');
+    const exporters = (romanNumeralTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ?? [];
     expect(exporters).toHaveLength(4);
     const first = exporters[0];
     expect(first).toBeDefined();
@@ -115,39 +110,20 @@ describe('app and seo', () => {
     const png = await (first.loader as ExporterLoader)();
     const resolved = 'default' in png ? png.default : png.exporter;
     expect(resolved.format).toBe('png');
-    expect(IDLE_TIMEOUT_MS).toBe(2_000);
   });
 
   it('renders tool components', () => {
-    const tapState: ToolState = {
-      ...DEFAULT_STATE,
-      taps: [1_000, 1_500, 2_000],
-    };
     render(
       <>
-        <ResetProbe />
-        <CanvasStateProbe state={tapState} />
+        <ToolToolbar />
+        <ToolSidebar text="XIV" fontSize={16} onFontSizeChange={() => {}} />
+        <ToolCanvas state={{ ...DEFAULT_STATE, direction: 'number', numberInput: '14' }} fontSize={16} />
       </>
     );
 
-    expect(screen.getByTestId('bpm-display')).toBeInTheDocument();
-    expect(screen.getByTestId('preset-grid')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open help page' })).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument(); // character count for "XIV"
+    expect(screen.getByRole('application', { name: 'Roman numeral converter canvas' })).toBeInTheDocument();
+    expect(screen.getByTestId('conversion-result')).toHaveTextContent('XIV');
   });
 });
-
-function ResetProbe() {
-  return (
-    <button type="button" data-testid="reset-probe">
-      Reset
-    </button>
-  );
-}
-
-function CanvasStateProbe({ state }: { state: ToolState }) {
-  return (
-    <div data-testid="canvas-probe">
-      <div data-testid="bpm-display">120.0</div>
-      <div data-testid="preset-grid">{state.taps.length} taps</div>
-    </div>
-  );
-}

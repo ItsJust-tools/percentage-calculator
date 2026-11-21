@@ -17,11 +17,14 @@ import {
   ToolCanvas,
   ToolToolbar,
   ToolSidebar,
-  computeBpmStats,
-  formatBpm,
 } from '@/tool';
-import { bpmTapTempoTool } from '@/tool/tool-definition';
+import { romanNumeralTool as romanNumeralToolDef } from '@/tool/tool-definition';
 import type { ToolState } from '@/tool/types';
+import { DEFAULT_STATE } from '@/tool/types';
+
+const DEFAULT_FONT_SIZE = 16;
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 72;
 
 export default function ToolClient() {
   const ToolShellCompat = ToolShell as unknown as ComponentType<Record<string, unknown>> & {
@@ -32,7 +35,7 @@ export default function ToolClient() {
     StatusBar?: ComponentType<{ children?: ReactNode }>;
   };
   const canvasRef = useRef<HTMLDivElement>(null);
-  const tool = useTool<ToolState>(bpmTapTempoTool, canvasRef);
+  const tool = useTool<ToolState>(romanNumeralToolDef, canvasRef);
   const setToolData = tool.state.setData;
   const showToast = tool.toast;
   const [isSharing, setIsSharing] = useState(false);
@@ -40,9 +43,14 @@ export default function ToolClient() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(
     () => typeof window !== 'undefined' && window.innerWidth > 768 && toolConfig.features.sidebar
   );
+  const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
 
   const title = toolConfig.name;
   const state = tool.state.data;
+
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
 
   const handleStateChange = useCallback(
     (updater: (prev: ToolState) => ToolState) => {
@@ -50,6 +58,10 @@ export default function ToolClient() {
     },
     [setToolData]
   );
+
+  const handleFontSizeChange = useCallback((delta: number) => {
+    setFontSize((prev) => Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, prev + delta)));
+  }, []);
 
   useEffect(() => {
     if (hasLoadedSharedState.current) return;
@@ -61,7 +73,7 @@ export default function ToolClient() {
       const serialized = decompressFromEncodedURIComponent(encodedState);
       if (!serialized) throw new Error('Invalid shared URL');
       const parsed: unknown = JSON.parse(serialized);
-      const deserialized = bpmTapTempoTool.deserialize(parsed);
+      const deserialized = romanNumeralToolDef.deserialize(parsed);
       if (!deserialized.success) throw new Error(deserialized.error);
       setToolData(deserialized.data);
       showToast('Loaded state from shared URL', 'success');
@@ -71,25 +83,10 @@ export default function ToolClient() {
     }
   }, [setToolData, showToast]);
 
-  const handleCopyBpm = useCallback(async () => {
-    const stats = computeBpmStats(state.taps);
-    if (stats.bpm === null) {
-      showToast('Tap at least twice before copying BPM', 'error');
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(formatBpm(stats.bpm));
-      showToast(`Copied ${formatBpm(stats.bpm)} BPM to clipboard`, 'success');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to copy BPM';
-      showToast(message, 'error');
-    }
-  }, [showToast, state.taps]);
-
   const handleShare = useCallback(async () => {
     setIsSharing(true);
     try {
-      const serialized = bpmTapTempoTool.serialize(state);
+      const serialized = romanNumeralToolDef.serialize(state);
       const encodedState = compressToEncodedURIComponent(serialized);
       if (!encodedState) throw new Error('Failed to encode state for URL');
       const url = new URL(window.location.href);
@@ -117,8 +114,8 @@ export default function ToolClient() {
     }
   }, [showToast, state, title]);
 
-  const handleReset = useCallback(() => {
-    setToolData((prev) => ({ ...prev, taps: [] }));
+  const handleClear = useCallback(() => {
+    setToolData(() => ({ ...DEFAULT_STATE }));
   }, [setToolData]);
 
   const toolbarContent = (
@@ -136,19 +133,19 @@ export default function ToolClient() {
   );
 
   const sidebarContent = (
-    <ToolSidebar state={state} onStateChange={handleStateChange} />
+    <ToolSidebar
+ text={state.direction === 'number' ? state.numberInput : state.romanInput} fontSize={fontSize} onFontSizeChange={handleFontSizeChange} />
   );
 
   const canvasContent = (
     <ToolCanvas
-      state={state}
       canvasRef={canvasRef}
+      state={state}
+      fontSize={fontSize}
       onStateChange={handleStateChange}
-      onClear={handleReset}
+      onClear={handleClear}
     />
   );
-
-  const stats = computeBpmStats(state.taps);
 
   const statusBarContent = (
     <>
@@ -166,10 +163,8 @@ export default function ToolClient() {
           'Ready'
         )}
       </span>
-      <span className="status-slot status-slot-bpm">
-        {stats.bpm === null ? 'No tempo' : `${formatBpm(stats.bpm)} BPM`}
-      </span>
-      <span className="status-slot status-slot-taps">{state.taps.length} taps</span>
+      <span className="status-slot status-slot-font-size">{fontSize}px</span>
+      <span className="status-slot">Range: 1–3999</span>
       <span className="status-slot status-slot-tool-version">Tool v{toolConfig.version}</span>
       <span className="status-slot status-slot-template-version">
         Template v{templateBaseVersion}
@@ -188,6 +183,7 @@ export default function ToolClient() {
   return (
     <ToolShellCompat
       config={toolConfig}
+      actions={useMemo(() => tool.toolbarActions, [tool.toolbarActions])}
       sidebarOpen={sidebarOpen}
       onSidebarChange={setSidebarOpen}
       toolbar={toolbarContent}
