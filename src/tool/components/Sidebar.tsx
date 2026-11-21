@@ -22,7 +22,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ state, onChange }) => {
           ))}
         </ul>
       </div>
-
       <div>
         <h3 className="mb-2 font-medium text-gray-900 dark:text-gray-100">Saved results</h3>
         <p className="text-xs text-gray-600 dark:text-gray-300" data-testid="sidebar-history-count">

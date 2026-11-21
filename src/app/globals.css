@@ -817,3 +817,40 @@ body {
   font-weight: 600;
   margin-left: 0.25rem;
 }
+
+/* --- BPM Tap Tempo tool styles --- */
+
+.tap-pad {
+  min-width: 220px;
+  min-height: 180px;
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  border: 2px solid var(--accent);
+  background: var(--card);
+  transition:
+    transform 0.08s ease-out,
+    background-color 0.08s ease-out,
+    box-shadow 0.08s ease-out;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.tap-pad-pulse,
+.tap-pad:active {
+  transform: scale(0.97);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 6px var(--accent-subtle);
+}
+
+.tap-target {
+  min-height: 100%;
+  outline-offset: -2px;
+}
+
+@media print {
+  .tap-pad,
+  .tap-target {
+    border-color: #333;
+    background: #fff;
+  }
+}
