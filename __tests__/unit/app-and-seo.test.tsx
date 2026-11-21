@@ -12,11 +12,11 @@ import { cn } from '@/lib/utils';
 import { generateJsonLd, generateToolMetadata } from '@/lib/seo';
 import toolConfig from '@/tool/tool.config';
 import { getPublicSiteUrl, templateMetadata } from '@/tool/template-metadata';
-import { baseConverterTool } from '@/tool/tool-definition';
+import { percentageCalculatorTool } from '@/tool/tool-definition';
 import { ToolCanvas } from '@/tool/components/tool-canvas';
 import { ToolSidebar } from '@/tool/components/tool-sidebar';
 import { ToolToolbar } from '@/tool/components/tool-toolbar';
-import { DEFAULT_STATE } from '@/tool/types';
+import { DEFAULT_STATE as BASE_DEFAULT_STATE } from '@/tool/types';
 import type { ExporterLoader } from '@itsjust/core';
 
 vi.mock('next/link', () => ({
@@ -93,27 +93,44 @@ describe('app and seo', () => {
   it('covers tool definition and helper exports', async () => {
     expect(cn('a', undefined, 'b', false, null, 'c')).toBe('a b c');
     expect(getPublicSiteUrl()).toBe('http://localhost:3000');
-    expect(baseConverterTool.deserialize({ input: 'ff', inputBase: 16 })).toEqual({
+    expect(percentageCalculatorTool.name).toBe(toolConfig.name);
+    expect(
+      percentageCalculatorTool.deserialize({
+        mode: 'change',
+        changeFrom: '80',
+        changeTo: '100',
+        history: [{ text: 'X% of Y: 30', createdAt: '2026-11-21T10:00:00.000Z' }],
+      })
+    ).toEqual({
       success: true,
       data: {
-        input: 'ff',
-        inputBase: 16,
-        digitCase: 'lower',
-        grouping: 'none',
-        showTwosComplement: true,
-        bitLength: DEFAULT_STATE.bitLength,
+        mode: 'change',
+        percentageOf: BASE_DEFAULT_STATE.percentageOf,
+        ofBase: BASE_DEFAULT_STATE.ofBase,
+        changeFrom: '80',
+        changeTo: '100',
+        reversePart: BASE_DEFAULT_STATE.reversePart,
+        reversePercent: BASE_DEFAULT_STATE.reversePercent,
+        addSubValue: BASE_DEFAULT_STATE.addSubValue,
+        addSubPercent: BASE_DEFAULT_STATE.addSubPercent,
+        addSubOp: BASE_DEFAULT_STATE.addSubOp,
+        compoundA: BASE_DEFAULT_STATE.compoundA,
+        compoundB: BASE_DEFAULT_STATE.compoundB,
+        history: [{ text: 'X% of Y: 30', createdAt: '2026-11-21T10:00:00.000Z' }],
       },
     });
-    expect(baseConverterTool.deserialize({ nope: true })).toEqual({
-      success: false,
-      error: 'Invalid data format: expected { input: string, inputBase: number (2-36), ... }',
-    });
-    expect(baseConverterTool.serialize({ ...DEFAULT_STATE, input: '11' })).toContain('"input":"11"');
-    expect(baseConverterTool.deserialize({ input: '11', inputBase: 10, digitCase: 'upper', grouping: 'byte', bitLength: 8 })).toEqual({
-      success: true,
-      data: { input: '11', inputBase: 10, digitCase: 'upper', grouping: 'byte', showTwosComplement: true, bitLength: 8 },
-    });
-    const exporters = (baseConverterTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ?? [];
+    const repaired = percentageCalculatorTool.deserialize({ nope: true });
+    expect(repaired.success).toBe(true);
+    if (repaired.success) {
+      expect(repaired.data.mode).toBe(BASE_DEFAULT_STATE.mode);
+      expect(repaired.data.history).toEqual([]);
+    }
+    expect(
+      percentageCalculatorTool.serialize({ ...BASE_DEFAULT_STATE, changeFrom: '80' })
+    ).toContain('"changeFrom":"80"');
+    const exporters =
+      (percentageCalculatorTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ??
+      [];
     expect(exporters).toHaveLength(4);
     const first = exporters[0];
     expect(first).toBeDefined();
@@ -127,14 +144,20 @@ describe('app and seo', () => {
     render(
       <>
         <ToolToolbar />
-        <ToolSidebar text="ff" fontSize={16} onFontSizeChange={() => {}} />
-        <ToolCanvas state={{ ...DEFAULT_STATE, input: '255' }} fontSize={16} />
+        <ToolSidebar state={{ ...BASE_DEFAULT_STATE }} onStateChange={() => {}} />
+        <ToolCanvas
+          state={{ ...BASE_DEFAULT_STATE, mode: 'of', percentageOf: '20', ofBase: '150' }}
+          fontSize={16}
+        />
       </>
     );
 
     expect(screen.getByRole('link', { name: 'Open help page' })).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument(); // digit count for "ff"
-    expect(screen.getByRole('application', { name: 'Base converter canvas' })).toBeInTheDocument();
-    expect(screen.getByTestId('base-row-16')).toHaveTextContent('ff');
+    expect(
+      screen.getByRole('application', { name: 'Percentage calculator canvas' })
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('mode-tab-of')).toBeInTheDocument();
+    expect(screen.getByTestId('result-card')).toBeInTheDocument();
+    expect(screen.getByTestId('result-main')).toHaveTextContent('30');
   });
 });

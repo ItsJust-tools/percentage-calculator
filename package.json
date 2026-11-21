@@ -1,14 +1,14 @@
 {
-  "name": "template",
+  "name": "percentage-calculator",
   "version": "1.4.0",
   "private": true,
   "description": "A Next.js template for building specialized single-purpose web tools. Each tool does ONE thing well.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ItsJust-tools/template.git"
+    "url": "git+https://github.com/ItsJust-tools/1795287972.git"
   },
-  "homepage": "https://github.com/ItsJust-tools/template",
+  "homepage": "https://github.com/ItsJust-tools/1795287972",
   "workspaces": [
     "packages/*"
   ],

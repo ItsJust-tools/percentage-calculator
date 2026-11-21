@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export function ToolToolbar() {
   return (
-    <div className="converter-toolbar">
+    <div className="percentage-toolbar">
       <Link href="/help" className="toolbar-btn toolbar-help-link" aria-label="Open help page">
         Help
       </Link>

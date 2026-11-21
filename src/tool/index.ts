@@ -2,16 +2,12 @@ export { default as toolConfig } from './tool.config';
 export { templateBaseVersion } from './template-metadata';
 export { templateMetadata, getPublicSiteUrl } from './template-metadata';
 export {
-  baseConverterTool,
-  parseInBase,
-  parseIntegerInBase,
-  formatInBase,
-  toUnsignedBits,
-  toTwosComplement,
-  groupBits,
-  requiredBitLength,
-  convertToAllBases,
-  twosComplementInfo,
+  percentageCalculatorTool,
+  serializeState,
+  deserializeState,
+  withHistory,
+  roundTrips,
+  numberOrNull,
 } from './tool-definition';
 export { ToolCanvas } from './components/tool-canvas';
 export { ToolToolbar } from './components/tool-toolbar';
@@ -19,9 +15,22 @@ export { ToolSidebar } from './components/tool-sidebar';
 export { Canvas } from './components/Canvas';
 export { Sidebar } from './components/Sidebar';
 export { Toolbar } from './components/Toolbar';
-export type {
-  ToolState,
-  DigitCase,
-  BitGrouping,
-  BaseConversion,
+export { MODES } from './ui-shared';
+export {
+  DEFAULT_STATE,
+  MAX_HISTORY,
+  parseNumber,
+  formatNumber,
+  percentOf,
+  percentChange,
+  reversePercentage,
+  addSubtract,
+  compoundPercent,
+  changeResult,
+  resultText,
+  stepsFor,
+  summaryText,
+  historyText,
+  isState,
 } from './types';
+export type { Mode, AddSubOp, HistoryEntry, ToolState } from './types';

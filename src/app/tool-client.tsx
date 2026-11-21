@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ComponentType,
@@ -11,20 +10,9 @@ import {
 } from 'react';
 import { ToolShell, useTool, ImportExport } from '@itsjust/core';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
-import {
-  toolConfig,
-  templateBaseVersion,
-  ToolCanvas,
-  ToolToolbar,
-  ToolSidebar,
-} from '@/tool';
-import { baseConverterTool as baseConverterToolDef } from '@/tool/tool-definition';
+import { toolConfig, templateBaseVersion, ToolCanvas, ToolToolbar, ToolSidebar, summaryText } from '@/tool';
+import { percentageCalculatorTool } from '@/tool/tool-definition';
 import type { ToolState } from '@/tool/types';
-import { DEFAULT_STATE } from '@/tool/types';
-
-const DEFAULT_FONT_SIZE = 16;
-const MIN_FONT_SIZE = 8;
-const MAX_FONT_SIZE = 72;
 
 export default function ToolClient() {
   const ToolShellCompat = ToolShell as unknown as ComponentType<Record<string, unknown>> & {
@@ -35,7 +23,7 @@ export default function ToolClient() {
     StatusBar?: ComponentType<{ children?: ReactNode }>;
   };
   const canvasRef = useRef<HTMLDivElement>(null);
-  const tool = useTool<ToolState>(baseConverterToolDef, canvasRef);
+  const tool = useTool<ToolState>(percentageCalculatorTool, canvasRef);
   const setToolData = tool.state.setData;
   const showToast = tool.toast;
   const [isSharing, setIsSharing] = useState(false);
@@ -43,14 +31,9 @@ export default function ToolClient() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(
     () => typeof window !== 'undefined' && window.innerWidth > 768 && toolConfig.features.sidebar
   );
-  const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
 
   const title = toolConfig.name;
   const state = tool.state.data;
-
-  useEffect(() => {
-    document.title = title;
-  }, [title]);
 
   const handleStateChange = useCallback(
     (updater: (prev: ToolState) => ToolState) => {
@@ -58,10 +41,6 @@ export default function ToolClient() {
     },
     [setToolData]
   );
-
-  const handleFontSizeChange = useCallback((delta: number) => {
-    setFontSize((prev) => Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, prev + delta)));
-  }, []);
 
   useEffect(() => {
     if (hasLoadedSharedState.current) return;
@@ -73,7 +52,7 @@ export default function ToolClient() {
       const serialized = decompressFromEncodedURIComponent(encodedState);
       if (!serialized) throw new Error('Invalid shared URL');
       const parsed: unknown = JSON.parse(serialized);
-      const deserialized = baseConverterToolDef.deserialize(parsed);
+      const deserialized = percentageCalculatorTool.deserialize(parsed);
       if (!deserialized.success) throw new Error(deserialized.error);
       setToolData(deserialized.data);
       showToast('Loaded state from shared URL', 'success');
@@ -83,10 +62,20 @@ export default function ToolClient() {
     }
   }, [setToolData, showToast]);
 
+  const handleCopyResult = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(`${title}\n${summaryText(state)}`);
+      showToast('Result copied to clipboard', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to copy result';
+      showToast(message, 'error');
+    }
+  }, [showToast, state, title]);
+
   const handleShare = useCallback(async () => {
     setIsSharing(true);
     try {
-      const serialized = baseConverterToolDef.serialize(state);
+      const serialized = percentageCalculatorTool.serialize(state);
       const encodedState = compressToEncodedURIComponent(serialized);
       if (!encodedState) throw new Error('Failed to encode state for URL');
       const url = new URL(window.location.href);
@@ -114,10 +103,6 @@ export default function ToolClient() {
     }
   }, [showToast, state, title]);
 
-  const handleClear = useCallback(() => {
-    setToolData(() => ({ ...DEFAULT_STATE, input: '' }));
-  }, [setToolData]);
-
   const toolbarContent = (
     <>
       <ToolToolbar />
@@ -132,17 +117,15 @@ export default function ToolClient() {
     </>
   );
 
-  const sidebarContent = (
-    <ToolSidebar text={state.input} fontSize={fontSize} onFontSizeChange={handleFontSizeChange} />
-  );
+  const sidebarContent = <ToolSidebar state={state} onStateChange={handleStateChange} />;
 
   const canvasContent = (
     <ToolCanvas
-      canvasRef={canvasRef}
       state={state}
-      fontSize={fontSize}
+      canvasRef={canvasRef}
       onStateChange={handleStateChange}
-      onClear={handleClear}
+      onClear={() => setToolData((prev) => ({ ...prev, history: [] }))}
+      onCopyResult={() => void handleCopyResult()}
     />
   );
 
@@ -162,8 +145,9 @@ export default function ToolClient() {
           'Ready'
         )}
       </span>
-      <span className="status-slot status-slot-font-size">{fontSize}px</span>
-      <span className="status-slot">Input base: {state.inputBase}</span>
+      <span className="status-slot status-slot-mode">{state.mode}</span>
+      <span className="status-slot status-slot-summary">{summaryText(state)}</span>
+      <span className="status-slot status-slot-history">{state.history.length} saved</span>
       <span className="status-slot status-slot-tool-version">Tool v{toolConfig.version}</span>
       <span className="status-slot status-slot-template-version">
         Template v{templateBaseVersion}
@@ -182,7 +166,6 @@ export default function ToolClient() {
   return (
     <ToolShellCompat
       config={toolConfig}
-      actions={useMemo(() => tool.toolbarActions, [tool.toolbarActions])}
       sidebarOpen={sidebarOpen}
       onSidebarChange={setSidebarOpen}
       toolbar={toolbarContent}
